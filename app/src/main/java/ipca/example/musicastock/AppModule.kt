@@ -15,6 +15,7 @@ import ipca.example.musicastock.data.local.dao.CollectionDao
 import ipca.example.musicastock.data.local.dao.MusicDao
 import ipca.example.musicastock.data.remote.api.AuthApi
 import ipca.example.musicastock.data.remote.api.CollectionsApi
+import ipca.example.musicastock.data.remote.api.EnvironmentsApi
 import ipca.example.musicastock.data.remote.api.MusicApi
 import ipca.example.musicastock.data.repository.CollectionRepositoryImpl
 import ipca.example.musicastock.data.repository.CollectionsLocalRepository
@@ -35,7 +36,7 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object AppModule {
 
-    private const val BASE_URL = "http://10.0.2.2:5000/"
+    private const val BASE_URL = "http://10.0.2.2:5267/"
 
     // -----------------------------
     // TokenStore
@@ -144,6 +145,8 @@ object AppModule {
     object AppModule {
     }
 
-
-
+    @Provides
+    @Singleton
+    fun provideEnvironmentsApi(retrofit: Retrofit): EnvironmentsApi =
+        retrofit.create(EnvironmentsApi::class.java)
 }
