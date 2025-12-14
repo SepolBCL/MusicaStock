@@ -32,8 +32,10 @@ import ipca.example.musicastock.ui.musics.MusicDetailView
 import ipca.example.musicastock.ui.theme.MusicastockTheme
 import javax.inject.Inject
 
-// Ambiente “por defeito” ligado à app (ajusta para o ID real da tua Jukebox.API)
-private const val DEFAULT_ENVIRONMENT_ID = "b0f51a4c-a0bf-4613-9900-12b1e6d8dfaf"
+
+// Ambiente "Crossfit Box" (Porto)
+private const val DEFAULT_ENVIRONMENT_ID = "d32082ce-f5d5-4ec6-aa5a-5801e52e0204"
+
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {

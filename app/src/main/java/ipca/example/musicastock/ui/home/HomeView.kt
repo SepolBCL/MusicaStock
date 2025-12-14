@@ -1,21 +1,29 @@
 package ipca.example.musicastock.ui.home
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import ipca.example.musicastock.R
 import ipca.example.musicastock.domain.models.Collection
 import kotlinx.coroutines.flow.collect
 
@@ -23,7 +31,7 @@ import kotlinx.coroutines.flow.collect
 @Composable
 fun HomeView(
     navController: NavHostController,
-    environmentId: String, // o ambiente “ligado” à app (ex.: Sala de Estudo)
+    environmentId: String,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState = viewModel.uiState
@@ -33,19 +41,18 @@ fun HomeView(
         viewModel.load(environmentId)
     }
 
-    // Ouvir eventos one-shot do ViewModel (ex.: navegação)
+    // Eventos one-shot (ex.: navegar para todas as coleções)
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
                 HomeEvent.NavigateToAllCollections -> {
-                    // Ajusta esta route para a tua navegação real
                     navController.navigate("collections")
                 }
             }
         }
     }
 
-    // Dialog de erro simples
+    // Dialog de erro
     uiState.error?.let { errorMsg ->
         AlertDialog(
             onDismissRequest = { viewModel.clearError() },
@@ -59,161 +66,293 @@ fun HomeView(
         )
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Jukebox – Ambiente",
-                        color = Color.White
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF181818),
-                    titleContentColor = Color.White
-                )
-            )
-        }
-    ) { padding ->
+    Box(modifier = Modifier.fillMaxSize()) {
+
+        // Fundo com imagem
+        Image(
+            painter = painterResource(id = R.drawable.img_3),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+
+        // Overlay escuro
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFF101010))
-                .padding(padding)
-        ) {
+                .background(Color.Black.copy(alpha = 0.4f))
+        )
+
+        Scaffold(
+            containerColor = Color.Transparent
+        ) { innerPadding ->
+
+            val layoutDirection = LocalLayoutDirection.current
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(
+                        start = innerPadding.calculateStartPadding(layoutDirection),
+                        end = innerPadding.calculateEndPadding(layoutDirection),
+                        bottom = innerPadding.calculateBottomPadding()
+                    )
             ) {
-                // Cabeçalho: Ambiente + cidade
-                Text(
-                    text = uiState.environmentName.ifBlank { "Ambiente não definido" },
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                if (uiState.city.isNotBlank()) {
-                    Text(
-                        text = "Cidade: ${uiState.city}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.8f)
-                    )
-                }
 
-                // Cartões com estado interno/externo
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                // HEADER tipo "hero", igual ao estilo de CollectionView
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
                 ) {
-                    WeatherCard(
-                        modifier = Modifier.weight(1f),
-                        tempRange = uiState.externalTempRange,
-                        description = uiState.externalWeatherDescription,
-                        precipitation = uiState.externalPrecipitation
+                    Image(
+                        painter = painterResource(id = R.drawable.img_51),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
                     )
 
-                    SensorsCard(
-                        modifier = Modifier.weight(1f),
-                        temperature = uiState.internalTemperature,
-                        humidity = uiState.internalHumidity,
-                        light = uiState.internalLight
-                    )
-                }
-
-                // Botões de modo de recomendação
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    SuggestionModeButton(
-                        text = "Sugestões por Meteorologia",
-                        selected = uiState.selectedMode == RecommendationMode.WEATHER,
-                        onClick = { viewModel.selectWeatherMode() }
-                    )
-                    SuggestionModeButton(
-                        text = "Sugestões por Sensores",
-                        selected = uiState.selectedMode == RecommendationMode.SENSORS,
-                        onClick = { viewModel.selectSensorsMode() }
-                    )
-                }
-
-                // Botão para ver todas as coletâneas
-                Button(
-                    onClick = { viewModel.onViewAllCollectionsClicked() },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFAF512E),
-                        contentColor = Color.White
-                    )
-                ) {
-                    Text(
-                        text = "Ver todas as coletâneas",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-
-                // Lista de coletâneas sugeridas
-                if (uiState.isLoading) {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        contentAlignment = Alignment.Center
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.3f))
+                    )
+
+
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        CircularProgressIndicator()
+                        // Botão Sair
+                        TextButton(
+                            onClick = {
+                                navController.navigate("login") {
+                                    popUpTo("collections") { inclusive = true }
+                                }
+                            },
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                                    contentDescription = "logout",
+                                    tint = Color.White.copy(alpha = 0.9f)
+                                )
+                                Spacer(
+                                    modifier = Modifier
+                                        .width(4.dp)
+                                )
+                                Text(
+                                    text = "Sair",
+                                    color = Color.White.copy(alpha = 0.9f)
+                                )
+                            }
+                        }
                     }
-                } else {
+
+
+                    // Centro: nome do ambiente + cidade
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(horizontal = 24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = uiState.environmentName.ifBlank { "Ambiente não definido" },
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (uiState.city.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = uiState.city,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White.copy(alpha = 0.9f)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Linha de cartões: Exterior / Interior
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(IntrinsicSize.Min),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        WeatherCard(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
+                            tempRange = uiState.externalTempRange,
+                            description = uiState.externalWeatherDescription,
+                            precipitation = uiState.externalPrecipitation
+                        )
+
+
+
+                        SensorsCard(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
+                            temperature = uiState.internalTemperature,
+                            humidity = uiState.internalHumidity,
+                            light = uiState.internalLight
+                        )
+                    }
+
+                    // Secção de modos de recomendação
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            SuggestionModeButton(
+                                text = "Sugestões por Meteorologia",
+                                selected = uiState.selectedMode == RecommendationMode.WEATHER,
+                                onClick = { viewModel.selectWeatherMode() },
+                                modifier = Modifier.weight(1f)
+                            )
+                            SuggestionModeButton(
+                                text = "Sugestões por Sensores",
+                                selected = uiState.selectedMode == RecommendationMode.SENSORS,
+                                onClick = { viewModel.selectSensorsMode() },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+
+                    // Bloco de sugestões de coletâneas
                     val collectionsToShow: List<Collection> = when (uiState.selectedMode) {
                         RecommendationMode.WEATHER -> uiState.weatherBasedCollections
                         RecommendationMode.SENSORS -> uiState.sensorBasedCollections
                         RecommendationMode.NONE -> emptyList()
                     }
 
-                    if (uiState.selectedMode == RecommendationMode.NONE) {
-                        Text(
-                            text = "Escolha um tipo de sugestão para ver as coletâneas recomendadas.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.8f)
-                        )
-                    } else if (collectionsToShow.isEmpty()) {
-                        Text(
-                            text = "Não foram encontradas coletâneas compatíveis com este contexto.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.8f)
-                        )
-                    } else {
-                        Text(
-                            text = "Coletâneas sugeridas:",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color.White,
-                            fontWeight = FontWeight.SemiBold
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        LazyColumn(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color.Black.copy(alpha = 0.35f)
+                        ),
+                        shape = RoundedCornerShape(24.dp) // garante que tens este import
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            items(collectionsToShow, key = { it.id }) { collection ->
-                                CollectionSuggestionRow(
-                                    collection = collection,
-                                    onClick = {
-                                        // Ajusta esta rota para a tua navegação real
-                                        navController.navigate("collectionDetail/${collection.id}")
+                            Text(
+                                text = "Coletâneas sugeridas",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color.White,
+                                fontWeight = FontWeight.SemiBold
+                            )
+
+                            Divider(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 2.dp),
+                                color = Color.White.copy(alpha = 0.15f)
+                            )
+
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                when {
+                                    uiState.isLoading -> {
+                                        CircularProgressIndicator(color = Color.White)
                                     }
-                                )
+
+                                    uiState.selectedMode == RecommendationMode.NONE -> {
+                                        Text(
+                                            text = "Escolha um tipo de sugestão para ver as coletâneas recomendadas.",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = Color.White.copy(alpha = 0.9f)
+                                        )
+                                    }
+
+                                    collectionsToShow.isEmpty() -> {
+                                        Text(
+                                            text = "Não foram encontradas coletâneas compatíveis com este contexto.",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = Color.White.copy(alpha = 0.9f)
+                                        )
+                                    }
+
+                                    else -> {
+                                        LazyColumn(
+                                            modifier = Modifier.fillMaxSize(),
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            items(
+                                                collectionsToShow,
+                                                key = { it.id }) { collection ->
+                                                CollectionSuggestionRow(
+                                                    collection = collection,
+                                                    onClick = {
+                                                        navController.navigate("collectionDetail/${collection.id}")
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
+
+
+
+                    Button(
+                        onClick = { viewModel.onViewAllCollectionsClicked() },
+                        modifier = Modifier.height(56.dp),
+                        shape = RoundedCornerShape(
+                            topStart = 0.dp,
+                            bottomStart = 0.dp,
+                            topEnd = 28.dp,
+                            bottomEnd = 28.dp
+                        ),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFAF512E),
+                            contentColor = Color.White
+                        ),
+                        contentPadding = PaddingValues(
+                            horizontal = 12.dp,
+                            vertical = 4.dp
+                        )
+                    ) {
+                        Text("Todas as coletâneas")
+                    }
+                }
+
                 }
             }
         }
     }
-}
+
 
 @Composable
 private fun WeatherCard(
@@ -235,7 +374,7 @@ private fun WeatherCard(
             Text(
                 text = "Exterior (IPMA)",
                 style = MaterialTheme.typography.titleSmall,
-                color = Color.White,
+                color=Color.White,
                 fontWeight = FontWeight.Bold
             )
             if (tempRange.isNotBlank()) {
@@ -333,7 +472,7 @@ private fun SuggestionModeButton(
     Surface(
         modifier = modifier.clickable { onClick() },
         color = bg,
-        shape = MaterialTheme.shapes.medium
+        shape = MaterialTheme.shapes.large
     ) {
         Box(
             modifier = Modifier.padding(vertical = 12.dp, horizontal = 8.dp),

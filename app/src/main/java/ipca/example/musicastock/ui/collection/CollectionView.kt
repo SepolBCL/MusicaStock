@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
@@ -116,8 +117,7 @@ fun CollectionView(
                     Image(
                         painter = painterResource(id = R.drawable.img_51),
                         contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxSize(),
+                        modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
 
@@ -135,12 +135,26 @@ fun CollectionView(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = uiState.userEmail,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.95f)
-                        )
+                        // ← Seta de voltar + email
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(
+                                onClick = { navController.popBackStack() },
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    containerColor = Color(0xFFAF512E),
+                                    contentColor = Color.White
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Voltar",
+                                    tint = Color.White
+                                )
+                            }
+                        }
 
+                        // Botão Sair
                         TextButton(
                             onClick = {
                                 navController.navigate("login") {
