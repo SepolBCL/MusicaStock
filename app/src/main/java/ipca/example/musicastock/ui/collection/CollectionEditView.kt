@@ -38,7 +38,7 @@ fun CollectionEditView(
 
     LaunchedEffect(uiState.collections) {
         if (!initialized) {
-            uiState.collections.find { it.id == collectionId }?.let { col ->
+            uiState.collections.find { it.colletionId == collectionId }?.let { col ->
                 title = col.title ?: ""
                 style = col.style ?: ""
                 initialized = true

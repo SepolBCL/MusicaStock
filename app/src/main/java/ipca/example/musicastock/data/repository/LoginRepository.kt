@@ -31,13 +31,21 @@ class LoginRepository @Inject constructor(
                 return@flow
             }
 
-            val token = response.body()?.token
+            val authBody = response.body()
+            val token = authBody?.token
+            val userId = authBody?.userId // Captura o userId do DTO
+
             if (token.isNullOrBlank()) {
-                emit(ResultWrapper.Error("Login efetuado, mas a API não devolveu token (campo 'token')."))
+                emit(ResultWrapper.Error("Login efetuado, mas a API não devolveu token."))
                 return@flow
             }
 
+            // Guarda as credenciais no TokenStore
             tokenStore.saveToken(token)
+            if (!userId.isNullOrBlank()) {
+                tokenStore.saveUserId(userId) // Persiste o ID do utilizador
+            }
+
             emit(ResultWrapper.Success(Unit))
         } catch (e: Exception) {
             emit(ResultWrapper.Error(e.message ?: "Erro desconhecido no login"))
@@ -55,10 +63,16 @@ class LoginRepository @Inject constructor(
                 return@flow
             }
 
-            val token = response.body()?.token
-            // Se a API devolver token no registo, fica logo autenticado
+            val authBody = response.body()
+            val token = authBody?.token
+            val userId = authBody?.userId // Captura o userId também no registo
+
+            // Se a API devolver credenciais no registo, guarda-as imediatamente
             if (!token.isNullOrBlank()) {
                 tokenStore.saveToken(token)
+                if (!userId.isNullOrBlank()) {
+                    tokenStore.saveUserId(userId)
+                }
             }
 
             emit(ResultWrapper.Success(Unit))
@@ -87,7 +101,7 @@ class LoginRepository @Inject constructor(
                 token = token,
                 newPassword = newPassword
             )
-            val response = api.resetPassword(request)    // POST /api/Auth/reset-password
+            val response = api.resetPassword(request)
 
             if (response.isSuccessful) {
                 ResultWrapper.Success(Unit)
@@ -100,5 +114,4 @@ class LoginRepository @Inject constructor(
             ResultWrapper.Error("Falha na comunicação com o servidor: ${e.message}")
         }
     }
-
 }

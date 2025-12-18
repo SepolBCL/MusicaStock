@@ -408,10 +408,10 @@ fun HomeView(
                                         modifier = Modifier.fillMaxSize(),
                                         verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        items(items = collectionsToShow, key = { it.id }) { collection ->
+                                        items(items = collectionsToShow, key = { it.colletionId }) { collection ->
                                             CollectionSuggestionRow(
                                                 collection = collection,
-                                                onClick = { navController.navigate("collectionDetail/${collection.id}") }
+                                                onClick = { navController.navigate("collectionDetail/${collection.colletionId}") }
                                             )
                                         }
                                     }

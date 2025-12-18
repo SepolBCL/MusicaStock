@@ -58,7 +58,7 @@ fun CollectionDetailView(
 ) {
     val collectionUi = collectionViewModel.uiState
     val musicUi = musicViewModel.uiState
-    val collection = collectionUi.collections.find { it.id == collectionId }
+    val collection = collectionUi.collections.find { it.colletionId == collectionId }
 
     var showDeleteDialog by remember { mutableStateOf(false) }
 
@@ -245,7 +245,7 @@ fun CollectionDetailView(
                 },
                 confirmButton = {
                     TextButton(onClick = {
-                        collection.id?.let { id ->
+                        collection.colletionId?.let { id ->
                             collectionViewModel.deleteCollection(id)
                             navController.popBackStack()
                         }

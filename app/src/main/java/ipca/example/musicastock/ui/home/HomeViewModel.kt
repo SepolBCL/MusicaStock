@@ -306,21 +306,21 @@ class HomeViewModel @Inject constructor(
         envMoods: Set<Mood>,
         limit: Int = 5
     ): List<Collection> {
-        val linked = linkedCollectionId?.let { id -> collections.firstOrNull { it.id == id } }
+        val linked = linkedCollectionId?.let { id -> collections.firstOrNull { it.colletionId == id } }
 
         val scored = collections.map { c ->
             val moods = moodsForCollection(c)
             var score = 0
             preferred.forEachIndexed { idx, m -> if (moods.contains(m)) score += (12 - idx * 2).coerceAtLeast(2) }
             envMoods.forEach { m -> if (moods.contains(m)) score += 5 }
-            if (linked != null && c.id == linked.id) score += 1000
+            if (linked != null && c.colletionId == linked.colletionId) score += 1000
             score to c
         }.sortedByDescending { it.first }.map { it.second }
 
         val result = mutableListOf<Collection>()
         if (linked != null) result.add(linked)
         for (c in scored) {
-            if (result.none { it.id == c.id }) result.add(c)
+            if (result.none { it.colletionId == c.colletionId }) result.add(c)
             if (result.size >= limit) break
         }
         return result.ifEmpty { collections.take(limit) }

@@ -13,12 +13,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -70,7 +72,6 @@ fun AllMusicsView(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-
         Image(
             painter = painterResource(id = R.drawable.img_3),
             contentDescription = null,
@@ -92,7 +93,6 @@ fun AllMusicsView(
                         .fillMaxWidth()
                         .height(100.dp)
                 ) {
-
                     Image(
                         painter = painterResource(id = R.drawable.img_5),
                         contentDescription = null,
@@ -145,11 +145,24 @@ fun AllMusicsView(
                         )
                     )
                 }
+            },
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = {
+                        // Navega para o ecrã de detalhes com ID vazio para criar nova música
+                        navController.navigate("musicDetail/")
+                    },
+                    containerColor = Color(0xFFAF512E),
+                    contentColor = Color.White
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Adicionar Música"
+                    )
+                }
             }
         ) { padding ->
-
             Box(modifier = Modifier.padding(padding)) {
-
                 when {
                     uiState.isLoading -> {
                         Box(
@@ -160,7 +173,6 @@ fun AllMusicsView(
                         }
                     }
 
-                    // Só mostra ecrã de erro "bloqueante" se não houver dados
                     uiState.error != null && uiState.musics.isEmpty() -> {
                         Box(
                             modifier = Modifier.fillMaxSize(),
@@ -189,7 +201,6 @@ fun AllMusicsView(
                                 .padding(horizontal = 8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            // Se houver aviso (ex: offline), mostra banner mas não bloqueia a lista
                             if (uiState.error != null) {
                                 Card(
                                     modifier = Modifier
@@ -236,11 +247,7 @@ fun AllMusicsView(
                                     focusedContainerColor = Color.Black.copy(alpha = 0.3f),
                                     unfocusedContainerColor = Color.Black.copy(alpha = 0.3f),
                                     focusedIndicatorColor = Color(0xFFAF512E),
-                                    unfocusedIndicatorColor = Color.White.copy(alpha = 0.5f),
-                                    focusedLeadingIconColor = Color.White,
-                                    unfocusedLeadingIconColor = Color.White.copy(alpha = 0.8f),
-                                    focusedPlaceholderColor = Color.White.copy(alpha = 0.6f),
-                                    unfocusedPlaceholderColor = Color.White.copy(alpha = 0.6f)
+                                    unfocusedIndicatorColor = Color.White.copy(alpha = 0.5f)
                                 )
                             )
 
@@ -252,7 +259,7 @@ fun AllMusicsView(
                             ) {
                                 items(
                                     items = filteredMusics,
-                                    key = { it.musId ?: "${it.musTitle}-${it.artist}-${it.audioUrl}" }
+                                    key = { it.musId ?: "${it.musTitle}-${it.artist}" }
                                 ) { music ->
                                     MusicViewCell(music = music)
                                 }

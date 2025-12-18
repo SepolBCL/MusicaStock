@@ -240,7 +240,7 @@ fun CollectionView(
                                     CollectionViewCell(
                                         collection = collection,
                                         onClick = {
-                                            navController.navigate("collectionDetail/${collection.id}")
+                                            navController.navigate("collectionDetail/${collection.colletionId}")
                                         }
                                     )
                                 }

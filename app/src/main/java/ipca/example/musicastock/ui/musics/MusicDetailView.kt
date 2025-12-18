@@ -20,7 +20,6 @@ import androidx.navigation.NavHostController
 import ipca.example.musicastock.R
 import ipca.example.musicastock.domain.models.Music
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,7 +46,7 @@ fun MusicDetailView(
         .takeIf { it.isNotBlank() && it.lowercase() != "null" && it.lowercase() != "none" }
 
     LaunchedEffect(musicId) {
-        if (musicId != null) viewModel.loadMusicById(musicId)
+        if (!musicId.isNullOrBlank()) viewModel.loadMusicById(musicId)
     }
 
     LaunchedEffect(uiState.selectedMusic) {
@@ -76,43 +75,36 @@ fun MusicDetailView(
 
     fun onSaveClick() {
         val titleTrim = title.trim()
-        val artistTrim = artist.trim()
-        val albumTrim = album.trim()
-        val releaseDateTrim = releaseDate.trim()
-        val musStyleTrim = musStyle.trim()
-
         if (titleTrim.isBlank()) {
             scope.launch { snackbarHostState.showSnackbar("O título é obrigatório!") }
             return
         }
 
+        val releaseDateTrim = releaseDate.trim()
         if (!isValidIsoDate(releaseDateTrim)) {
-            scope.launch { snackbarHostState.showSnackbar("Data inválida. Usa yyyy-MM-dd (ex: 1997-05-20).") }
+            scope.launch { snackbarHostState.showSnackbar("Data inválida. Usa yyyy-MM-dd.") }
             return
         }
 
-        // ✅ musId agora é sempre String (não-nulo)
-        val finalId = musicId ?: uiState.selectedMusic?.musId ?: UUID.randomUUID().toString()
-
+        // Já não geramos UUID.randomUUID(). Se musicId for null, a API cria o ID.
         val music = Music(
-            musId = musicId ?: java.util.UUID.randomUUID().toString(),
+            musId = musicId ?: "",
             musTitle = titleTrim,
-            artist = artistTrim.ifBlank { null },
-            album = albumTrim.ifBlank { null },
+            artist = artist.trim().ifBlank { null },
+            album = album.trim().ifBlank { null },
             releaseDate = releaseDateTrim.ifBlank { null },
-            musStyle = musStyleTrim.ifBlank { null },
+            musStyle = musStyle.trim().ifBlank { null },
             audioUrl = audioUrl.trim().ifBlank { null },
             tabUrl = tabUrl.trim().ifBlank { null },
-            collectionId = safeCollectionId,
-            //isNew = (musicId == null)
+            collectionId = safeCollectionId
         )
 
-
-        viewModel.saveMusic(music) { navController.popBackStack() }
+        viewModel.saveMusic(music) {
+            navController.popBackStack()
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-
         Image(
             painter = painterResource(id = R.drawable.img_3),
             contentDescription = null,
@@ -130,31 +122,21 @@ fun MusicDetailView(
             containerColor = Color.Transparent,
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(100.dp)
-                ) {
+                Box(modifier = Modifier.fillMaxWidth().height(100.dp)) {
                     Image(
                         painter = painterResource(id = R.drawable.img_51),
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.4f))
-                    )
+                    Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)))
 
                     CenterAlignedTopAppBar(
                         title = {
                             Text(
                                 text = if (musicId == null) "Nova Música" else "Editar Música",
                                 color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.titleLarge
+                                fontWeight = FontWeight.Bold
                             )
                         },
                         navigationIcon = {
@@ -165,11 +147,7 @@ fun MusicDetailView(
                                     contentColor = Color.White
                                 )
                             ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Voltar",
-                                    tint = Color.White
-                                )
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Voltar")
                             }
                         },
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -178,92 +156,35 @@ fun MusicDetailView(
             },
             bottomBar = {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.End
                 ) {
                     FloatingActionButton(
                         onClick = { onSaveClick() },
                         containerColor = Color(0xFFAF512E),
                         contentColor = Color.White
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Save,
-                            contentDescription = if (musicId == null) "Guardar Música" else "Atualizar Música"
-                        )
+                        Icon(Icons.Default.Save, contentDescription = "Guardar")
                     }
                 }
             }
         ) { padding ->
-
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(16.dp),
+                modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text("Título") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = artist,
-                    onValueChange = { artist = it },
-                    label = { Text("Artista") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = album,
-                    onValueChange = { album = it },
-                    label = { Text("Álbum") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = releaseDate,
-                    onValueChange = { releaseDate = it },
-                    label = { Text("Data de Lançamento (yyyy-MM-dd)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = musStyle,
-                    onValueChange = { musStyle = it },
-                    label = { Text("Estilo") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = audioUrl,
-                    onValueChange = { audioUrl = it },
-                    label = { Text("URL do Áudio (opcional)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = tabUrl,
-                    onValueChange = { tabUrl = it },
-                    label = { Text("URL da Tabelatura (opcional)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Título") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = artist, onValueChange = { artist = it }, label = { Text("Artista") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = album, onValueChange = { album = it }, label = { Text("Álbum") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = releaseDate, onValueChange = { releaseDate = it }, label = { Text("Data (yyyy-MM-dd)") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = musStyle, onValueChange = { musStyle = it }, label = { Text("Estilo") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = audioUrl, onValueChange = { audioUrl = it }, label = { Text("URL Áudio") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = tabUrl, onValueChange = { tabUrl = it }, label = { Text("URL Tabelatura") }, modifier = Modifier.fillMaxWidth())
             }
         }
 
         if (uiState.isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.3f)),
-                contentAlignment = Alignment.Center
-            ) {
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f)), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = Color.White)
             }
         }

@@ -1,7 +1,7 @@
 package ipca.example.musicastock
 
+
 import android.content.Context
-import androidx.room.Room
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -11,17 +11,12 @@ import ipca.example.musicastock.data.auth.AuthInterceptor
 import ipca.example.musicastock.data.auth.TokenStore
 import ipca.example.musicastock.data.auth.TokenStoreImpl
 import ipca.example.musicastock.data.auth.remote.EnvironmentsApi
-import ipca.example.musicastock.data.local.AppDatabase
-import ipca.example.musicastock.data.local.dao.CollectionDao
-import ipca.example.musicastock.data.local.dao.MusicDao
 import ipca.example.musicastock.data.remote.api.AuthApi
 import ipca.example.musicastock.data.remote.api.CollectionsApi
 import ipca.example.musicastock.data.remote.api.MusicApi
 import ipca.example.musicastock.data.repository.CollectionRepositoryImpl
-import ipca.example.musicastock.data.repository.CollectionsLocalRepository
 import ipca.example.musicastock.data.repository.LoginRepository
 import ipca.example.musicastock.data.repository.MusicRepository
-import ipca.example.musicastock.data.repository.MusicsLocalRepository
 import ipca.example.musicastock.domain.repository.ICollectionRepository
 import ipca.example.musicastock.domain.repository.ILoginRepository
 import ipca.example.musicastock.domain.repository.IMusicRepository
@@ -31,32 +26,30 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Singleton
 
-
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
 
     private const val BASE_URL = "https://jukebox-api-isi-fmhzchchcggsbwam.francecentral-01.azurewebsites.net"
 
-    // -----------------------------
-    // TokenStore
-    // -----------------------------
+    // --- TokenStore ---
     @Provides
     @Singleton
     fun provideTokenStore(@ApplicationContext context: Context): TokenStore =
         TokenStoreImpl(context)
 
-    // -----------------------------
-    // Interceptor
-    // -----------------------------
+    // --- Networking ---
     @Provides
     @Singleton
-    fun provideOkHttpClient(authInterceptor: AuthInterceptor): OkHttpClient =
-        OkHttpClient.Builder()
-            .addInterceptor(authInterceptor)   // <- aqui é o ponto crítico
+    fun provideOkHttpClient(authInterceptor: AuthInterceptor): OkHttpClient {
+        val logging = HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BODY
+        }
+        return OkHttpClient.Builder()
+            .addInterceptor(logging)
+            .addInterceptor(authInterceptor)
             .build()
-
-
+    }
 
     @Provides
     @Singleton
@@ -67,9 +60,7 @@ object AppModule {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
 
-    // -----------------------------
-    // APIs
-    // -----------------------------
+    // --- APIs ---
     @Provides
     @Singleton
     fun provideAuthApi(retrofit: Retrofit): AuthApi =
@@ -85,9 +76,12 @@ object AppModule {
     fun provideCollectionsApi(retrofit: Retrofit): CollectionsApi =
         retrofit.create(CollectionsApi::class.java)
 
-    // -----------------------------
-    // Repositories (Domain interfaces)
-    // -----------------------------
+    @Provides
+    @Singleton
+    fun provideEnvironmentsApi(retrofit: Retrofit): EnvironmentsApi =
+        retrofit.create(EnvironmentsApi::class.java)
+
+    // --- Repositories ---
     @Provides
     @Singleton
     fun provideLoginRepository(
@@ -99,42 +93,13 @@ object AppModule {
     @Singleton
     fun provideMusicRepository(
         musicApi: MusicApi,
-        collectionsApi: CollectionsApi,
-        local: MusicsLocalRepository
-    ): IMusicRepository = MusicRepository(musicApi, collectionsApi, local)
+        collectionsApi: CollectionsApi
+    ): IMusicRepository = MusicRepository(musicApi, collectionsApi)
 
     @Provides
     @Singleton
     fun provideCollectionRepository(
         api: CollectionsApi,
-        local: CollectionsLocalRepository
-    ): ICollectionRepository = CollectionRepositoryImpl(api, local)
-
-    // -----------------------------
-    // Room
-    // -----------------------------
-    @Provides
-    @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): AppDatabase =
-        Room.databaseBuilder(context, AppDatabase::class.java, "local_music_db")
-            .fallbackToDestructiveMigration()
-            .build()
-
-    @Provides
-    @Singleton
-    fun provideCollectionDao(db: AppDatabase): CollectionDao = db.collectionDao()
-
-    @Provides
-    @Singleton
-    fun provideMusicDao(db: AppDatabase): MusicDao = db.musicDao()
-
-    @Module
-    @InstallIn(SingletonComponent::class)
-    object AppModule {
-    }
-
-    @Provides
-    @Singleton
-    fun provideEnvironmentsApi(retrofit: Retrofit): EnvironmentsApi =
-        retrofit.create(EnvironmentsApi::class.java)
+        tokenStore: TokenStore
+    ): ICollectionRepository = CollectionRepositoryImpl(api,tokenStore)
 }

@@ -7,7 +7,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import ipca.example.musicastock.data.ResultWrapper
-import ipca.example.musicastock.data.repository.MusicsLocalRepository
 import ipca.example.musicastock.domain.models.Music
 import ipca.example.musicastock.domain.repository.IMusicRepository
 import kotlinx.coroutines.launch
@@ -22,8 +21,7 @@ data class MusicState(
 
 @HiltViewModel
 class MusicViewModel @Inject constructor(
-    private val musicRepository: IMusicRepository,
-    private val localRepository: MusicsLocalRepository
+    private val musicRepository: IMusicRepository
 ) : ViewModel() {
 
     var uiState by mutableStateOf(MusicState())
@@ -38,31 +36,18 @@ class MusicViewModel @Inject constructor(
                     }
 
                     is ResultWrapper.Success -> {
-                        val musics = result.data ?: emptyList()
-                        uiState = uiState.copy(isLoading = false, musics = musics, error = null)
-
-                        runCatching {
-                            localRepository.clearAll()
-                            localRepository.insertMusics(musics)
-                        }
+                        uiState = uiState.copy(
+                            isLoading = false,
+                            musics = result.data ?: emptyList(),
+                            error = null
+                        )
                     }
 
                     is ResultWrapper.Error -> {
-                        val cached = runCatching { localRepository.getAllMusics() }
-                            .getOrDefault(emptyList())
-
-                        uiState = if (cached.isNotEmpty()) {
-                            uiState.copy(
-                                isLoading = false,
-                                musics = cached,
-                                error = "Sem ligação. A mostrar dados offline."
-                            )
-                        } else {
-                            uiState.copy(
-                                isLoading = false,
-                                error = result.message ?: "Erro ao carregar músicas."
-                            )
-                        }
+                        uiState = uiState.copy(
+                            isLoading = false,
+                            error = result.message ?: "Erro ao carregar músicas."
+                        )
                     }
                 }
             }
@@ -78,30 +63,18 @@ class MusicViewModel @Inject constructor(
                     }
 
                     is ResultWrapper.Success -> {
-                        val musics = result.data ?: emptyList()
-                        uiState = uiState.copy(isLoading = false, musics = musics, error = null)
-
-                        // cache local (p/ offline)
-                        runCatching { localRepository.insertMusics(musics) }
+                        uiState = uiState.copy(
+                            isLoading = false,
+                            musics = result.data ?: emptyList(),
+                            error = null
+                        )
                     }
 
                     is ResultWrapper.Error -> {
-                        val cached = runCatching { localRepository.getAllMusics() }
-                            .getOrDefault(emptyList())
-                            .filter { it.collectionId == collectionId }
-
-                        uiState = if (cached.isNotEmpty()) {
-                            uiState.copy(
-                                isLoading = false,
-                                musics = cached,
-                                error = "Sem ligação. A mostrar dados offline."
-                            )
-                        } else {
-                            uiState.copy(
-                                isLoading = false,
-                                error = result.message ?: "Erro ao carregar músicas da coletânea."
-                            )
-                        }
+                        uiState = uiState.copy(
+                            isLoading = false,
+                            error = result.message ?: "Erro ao carregar músicas da coletânea."
+                        )
                     }
                 }
             }
@@ -147,10 +120,6 @@ class MusicViewModel @Inject constructor(
                     is ResultWrapper.Success -> {
                         uiState = uiState.copy(isLoading = false, error = null)
 
-                        // IMPORTANTE:
-                        // Não inserir aqui "music" diretamente no Room, porque ao criar online
-                        // o ID vem do servidor e o repository é que deve cachear a versão correta.
-                        // Faz refresh da lista para refletir o ID correto.
                         val colId = music.collectionId
                         if (!colId.isNullOrBlank()) fetchMusicsByCollection(colId) else fetchAllMusics()
 
@@ -158,25 +127,15 @@ class MusicViewModel @Inject constructor(
                     }
 
                     is ResultWrapper.Error -> {
-                        // offline-friendly: o repository pode já ter guardado (ou tenta-se aqui)
-                        runCatching { localRepository.insertMusic(music) }
-
                         uiState = uiState.copy(
                             isLoading = false,
-                            error = "Sem ligação. Música guardada apenas localmente."
+                            error = result.message ?: "Erro ao guardar música."
                         )
-
-                        val colId = music.collectionId
-                        if (!colId.isNullOrBlank()) fetchMusicsByCollection(colId) else fetchAllMusics()
-
-                        onSuccess()
                     }
                 }
             }
         }
     }
-
-
 
     fun removeMusicFromCollection(collectionId: String, musicId: String) {
         viewModelScope.launch {
@@ -193,7 +152,6 @@ class MusicViewModel @Inject constructor(
                             musics = uiState.musics.filterNot { it.musId == musicId }
                         )
 
-                        // refresh para garantir consistência com Room+API
                         fetchMusicsByCollection(collectionId)
                     }
 

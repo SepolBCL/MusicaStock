@@ -15,25 +15,16 @@ import javax.inject.Inject
 
 class MusicRepository @Inject constructor(
     private val musicApi: MusicApi,
-    private val collectionsApi: CollectionsApi,
-    private val localRepository: MusicsLocalRepository
+    private val collectionsApi: CollectionsApi
 ) : IMusicRepository {
 
     override fun fetchAllMusics(): Flow<ResultWrapper<List<Music>>> = flow {
         emit(ResultWrapper.Loading())
         try {
             val remote = musicApi.getAll().map { it.toDomain() }
-
-            runCatching {
-                localRepository.clearAll()
-                localRepository.insertMusics(remote)
-            }
-
             emit(ResultWrapper.Success(remote))
         } catch (e: Exception) {
-            val cached = runCatching { localRepository.getAllMusics() }.getOrDefault(emptyList())
-            if (cached.isNotEmpty()) emit(ResultWrapper.Success(cached))
-            else emit(ResultWrapper.Error(e.message ?: "Erro ao carregar músicas."))
+            emit(ResultWrapper.Error(e.message ?: "Erro ao carregar músicas."))
         }
     }.flowOn(Dispatchers.IO)
 
@@ -42,17 +33,9 @@ class MusicRepository @Inject constructor(
         try {
             val remote = collectionsApi.getMusicsForCollection(collectionId)
                 .map { it.toDomain().copy(collectionId = collectionId) }
-
-            runCatching { localRepository.insertMusics(remote) }
-
             emit(ResultWrapper.Success(remote))
         } catch (e: Exception) {
-            val cached = runCatching { localRepository.getAllMusics() }
-                .getOrDefault(emptyList())
-                .filter { it.collectionId == collectionId }
-
-            if (cached.isNotEmpty()) emit(ResultWrapper.Success(cached))
-            else emit(ResultWrapper.Error(e.message ?: "Erro ao carregar músicas da coletânea."))
+            emit(ResultWrapper.Error(e.message ?: "Erro ao carregar músicas da coletânea."))
         }
     }.flowOn(Dispatchers.IO)
 
@@ -64,11 +47,7 @@ class MusicRepository @Inject constructor(
             val dto = musicApi.getById(id)
             ResultWrapper.Success(dto.toDomain())
         } catch (e: Exception) {
-            val cached = runCatching { localRepository.getAllMusics() }.getOrNull()
-                ?.firstOrNull { it.musId == id }
-
-            if (cached != null) ResultWrapper.Success(cached)
-            else ResultWrapper.Error(e.message ?: "Erro ao carregar música.")
+            ResultWrapper.Error(e.message ?: "Erro ao carregar música.")
         }
     }
 
@@ -82,102 +61,54 @@ class MusicRepository @Inject constructor(
         }
 
         try {
-            // CREATE (se quiseres continuar a suportar este cenário, musId tem de vir vazio/blank da UI)
             if (music.musId.isBlank()) {
-
                 val created = musicApi.create(music.toDtoForCreate())
-
                 val newId = created.musicId
+
                 if (newId.isNullOrBlank()) {
                     emit(ResultWrapper.Error("A API não devolveu o ID da música criada."))
                     return@flow
                 }
 
-                // Se estiver a criar dentro de uma coleção, cria associação
                 val colId = music.collectionId
                 if (!colId.isNullOrBlank()) {
-                    runCatching { collectionsApi.addMusicToCollection(colId!!, newId!!) }
+                    collectionsApi.addMusicToCollection(colId!!, newId!!)
                 }
 
-                // Guardar no Room com ID real + campos que a API pode não guardar
-                val saved = created.toDomain().copy(
-                    collectionId = colId,
-                    musStyle = music.musStyle,
-                    tabUrl = music.tabUrl
-                )
-
-                runCatching { localRepository.insertMusic(saved) }
                 emit(ResultWrapper.Success(Unit))
-
             } else {
-                // UPDATE
                 val res = musicApi.update(music.musId, music.toDtoForUpdate())
                 if (!res.isSuccessful) {
                     emit(ResultWrapper.Error("Erro ao atualizar música (${res.code()})."))
                     return@flow
                 }
-
-                runCatching { localRepository.insertMusic(music) }
                 emit(ResultWrapper.Success(Unit))
             }
-        } catch (_: Exception) {
-            // OFFLINE: guarda em Room e devolve Error para o ViewModel mostrar o aviso
-            val offline = if (music.musId.isBlank())
-                music.copy(musId = UUID.randomUUID().toString())
-            else
-                music
-
-            runCatching { localRepository.insertMusic(offline) }
-
-            emit(ResultWrapper.Error("Sem ligação. Música guardada apenas localmente."))
+        } catch (e: Exception) {
+            emit(ResultWrapper.Error("Falha na operação: ${e.message}"))
         }
     }.flowOn(Dispatchers.IO)
-
 
     override fun removeMusicFromCollection(
         collectionId: String,
         musicId: String
     ): Flow<ResultWrapper<Unit>> = flow {
         emit(ResultWrapper.Loading())
-
         try {
             val res = collectionsApi.removeMusicFromCollection(collectionId, musicId)
-
             if (!res.isSuccessful) {
-                // 👇 É AQUI que entra o que perguntaste
-                val errorText = res.errorBody()?.string()
-                emit(ResultWrapper.Error(errorText ?: "Erro (${res.code()})"))
+                val errorJson = res.errorBody()?.string()
+                emit(ResultWrapper.Error("Erro (${res.code()}): $errorJson"))
                 return@flow
             }
-
-            // Só atualiza localmente quando a API confirmou sucesso
-            runCatching {
-                val all = localRepository.getAllMusics()
-                val match = all.firstOrNull { it.musId == musicId }
-                if (match != null) localRepository.insertMusic(match.copy(collectionId = null))
-            }
-
             emit(ResultWrapper.Success(Unit))
-
-        } catch (_: Exception) {
-            // offline
-            runCatching {
-                val all = localRepository.getAllMusics()
-                val match = all.firstOrNull { it.musId == musicId }
-                if (match != null) localRepository.insertMusic(match.copy(collectionId = null))
-            }
-
-            emit(ResultWrapper.Error("Sem ligação. Remoção feita apenas localmente."))
+        } catch (e: Exception) {
+            emit(ResultWrapper.Error("Erro de ligação: ${e.message}"))
         }
     }.flowOn(Dispatchers.IO)
 
-
-    // -----------------------------
-    // Mappers
-    // -----------------------------
     private fun MusicDto.toDomain(): Music = Music(
-        // ✅ Room: PK não pode ser null
-        musId = this.musicId ?: UUID.randomUUID().toString(),
+        musId = this.musicId ?: "",
         musTitle = this.title,
         artist = this.artist,
         album = this.album,
