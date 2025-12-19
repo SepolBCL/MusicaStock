@@ -96,12 +96,34 @@ class MusicRepository @Inject constructor(
         emit(ResultWrapper.Loading())
         try {
             val res = collectionsApi.removeMusicFromCollection(collectionId, musicId)
-            if (!res.isSuccessful) {
-                val errorJson = res.errorBody()?.string()
-                emit(ResultWrapper.Error("Erro (${res.code()}): $errorJson"))
-                return@flow
+            if (res.isSuccessful) {
+                emit(ResultWrapper.Success(Unit))
+            } else {
+                // Tenta obter a mensagem do corpo do erro enviado pela API
+                val errorBody = res.errorBody()?.string()
+                val message = if (!errorBody.isNullOrBlank()) {
+                    errorBody
+                } else {
+                    "Erro ao remover música (${res.code()})"
+                }
+
+                emit(ResultWrapper.Error(message))
             }
-            emit(ResultWrapper.Success(Unit))
+        } catch (e: Exception) {
+            emit(ResultWrapper.Error("Erro de ligação: ${e.message}"))
+        }
+    }.flowOn(Dispatchers.IO)
+
+    override fun deleteMusic(musicId: String): Flow<ResultWrapper<Unit>> = flow {
+        emit(ResultWrapper.Loading())
+        try {
+            val res = musicApi.delete(musicId)
+            if (res.isSuccessful) {
+                emit(ResultWrapper.Success(Unit))
+            } else {
+                val errorBody = res.errorBody()?.string()
+                emit(ResultWrapper.Error(errorBody ?: "Erro ao apagar música (${res.code()})"))
+            }
         } catch (e: Exception) {
             emit(ResultWrapper.Error("Erro de ligação: ${e.message}"))
         }

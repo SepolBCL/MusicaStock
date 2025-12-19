@@ -12,5 +12,6 @@ interface IMusicRepository {
     fun saveMusic(music: Music): Flow<ResultWrapper<Unit>>
 
     fun removeMusicFromCollection(collectionId: String, musicId: String): Flow<ResultWrapper<Unit>>
+    fun deleteMusic(musicId: String): Flow<ResultWrapper<Unit>>
 }
 

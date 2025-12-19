@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -54,8 +55,16 @@ fun AllMusicsView(
     navController: NavHostController,
     viewModel: MusicViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val uiState = viewModel.uiState
     var searchText by rememberSaveable { mutableStateOf("") }
+
+    // Efeito para mostrar Toast sempre que houver uma nova mensagem de erro
+    LaunchedEffect(uiState.error) { //
+        uiState.error?.let { errorMsg ->
+            android.widget.Toast.makeText(context, errorMsg, android.widget.Toast.LENGTH_LONG).show() //
+        }
+    }
 
     val filteredMusics = remember(uiState.musics, searchText) {
         val q = searchText.trim()
@@ -211,12 +220,6 @@ fun AllMusicsView(
                                     ),
                                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                                 ) {
-                                    Text(
-                                        text = uiState.error ?: "",
-                                        modifier = Modifier.padding(12.dp),
-                                        color = Color.White,
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
                                 }
                             }
 
@@ -261,7 +264,10 @@ fun AllMusicsView(
                                     items = filteredMusics,
                                     key = { it.musId ?: "${it.musTitle}-${it.artist}" }
                                 ) { music ->
-                                    MusicViewCell(music = music)
+                                    MusicViewCell(
+                                        music = music,
+                                        onDelete = { viewModel.deleteMusic(music.musId) }
+                                    )
                                 }
                             }
                         }

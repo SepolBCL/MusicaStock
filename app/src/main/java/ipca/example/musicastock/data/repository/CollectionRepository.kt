@@ -71,7 +71,11 @@ class CollectionRepositoryImpl @Inject constructor(
             if (res.isSuccessful) {
                 emit(ResultWrapper.Success(Unit))
             } else {
-                emit(ResultWrapper.Error("Erro ao apagar: ${res.code()}"))
+                val errorBody = res.errorBody()?.string()
+                // Se a API devolver JSON (ex: {"message": "Não és admin"}),
+                // podes usar o errorBody diretamente ou fazer o parse
+                val message = errorBody ?: "Erro ao apagar: ${res.code()}"
+                emit(ResultWrapper.Error(message))
             }
         } catch (e: Exception) {
             emit(ResultWrapper.Error("Erro de ligação: ${e.message}"))

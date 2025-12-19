@@ -43,7 +43,8 @@ import ipca.example.musicastock.domain.models.Music
 
 @Composable
 fun MusicViewCell(
-    music: Music
+    music: Music,
+    onDelete: () -> Unit
 ) {
     val context = LocalContext.current
     var showInfo by remember { mutableStateOf(false) }
@@ -135,7 +136,8 @@ fun MusicViewCell(
     if (showInfo) {
         MusicInfoDialog(
             music = music,
-            onDismiss = { showInfo = false }
+            onDismiss = { showInfo = false },
+            onDelete = onDelete
         )
     }
 }
@@ -143,7 +145,8 @@ fun MusicViewCell(
 @Composable
 fun MusicInfoDialog(
     music: Music,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onDelete: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -207,6 +210,18 @@ fun MusicInfoDialog(
                 Text(
                     text = "Fechar",
                     color = Color(0xFFAF512E),
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = {
+                onDelete()
+                onDismiss()
+            }) {
+                Text(
+                    text = "Eliminar",
+                    color = Color.Red,
                     fontWeight = FontWeight.SemiBold
                 )
             }

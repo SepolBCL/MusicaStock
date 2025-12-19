@@ -2,6 +2,7 @@ package ipca.example.musicastock.ui.collection
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -56,11 +57,35 @@ fun CollectionDetailView(
     collectionViewModel: CollectionViewModel = hiltViewModel(),
     musicViewModel: MusicViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val collectionUi = collectionViewModel.uiState
     val musicUi = musicViewModel.uiState
     val collection = collectionUi.collections.find { it.colletionId == collectionId }
 
     var showDeleteDialog by remember { mutableStateOf(false) }
+
+    // 1. Navegação (Sucesso ao apagar/editar coleção)
+    LaunchedEffect(Unit) {
+        collectionViewModel.navigationEvent.collect { event ->
+            if (event is CollectionNavEvent.NavigateBack) {
+                navController.popBackStack()
+            }
+        }
+    }
+
+    // 2. Erros de Coletânea (Ex: Apagar coletânea sem ser admin)
+    LaunchedEffect(collectionUi.error) {
+        collectionUi.error?.let { errorMsg ->
+            Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    // 3. Erros de Músicas (Ex: Falha ao carregar ou remover música da lista)
+    LaunchedEffect(musicUi.error) {
+        musicUi.error?.let { errorMsg ->
+            Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
+        }
+    }
 
     LaunchedEffect(collectionId) {
         if (collectionUi.collections.isEmpty()) {
@@ -199,7 +224,7 @@ fun CollectionDetailView(
                         .fillMaxWidth()
                 ) {
                     when {
-                        musicUi.isLoading -> {
+                        musicUi.isLoading || collectionUi.isLoading -> {
                             Box(
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center
@@ -247,7 +272,6 @@ fun CollectionDetailView(
                     TextButton(onClick = {
                         collection.colletionId?.let { id ->
                             collectionViewModel.deleteCollection(id)
-                            navController.popBackStack()
                         }
                         showDeleteDialog = false
                     }) {
@@ -278,7 +302,16 @@ fun CollectionMusicList(
     musics: List<Music>,
     musicViewModel: MusicViewModel
 ) {
+    val context = LocalContext.current // Necessário para o Toast aqui dentro
+    val musicUi = musicViewModel.uiState
     var musicToDelete by remember { mutableStateOf<Music?>(null) }
+
+    // Observar erros específicos da remoção de música nesta lista
+    LaunchedEffect(musicUi.error) {
+        musicUi.error?.let { errorMsg ->
+            Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
+        }
+    }
 
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
@@ -328,7 +361,6 @@ fun CollectionMusicList(
                 }
             )
         }
-
     }
 }
 

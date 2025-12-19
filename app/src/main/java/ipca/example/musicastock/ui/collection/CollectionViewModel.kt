@@ -9,6 +9,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import ipca.example.musicastock.data.ResultWrapper
 import ipca.example.musicastock.domain.models.Collection
 import ipca.example.musicastock.domain.repository.ICollectionRepository
+import kotlinx.coroutines.channels.Channel //
+import kotlinx.coroutines.flow.receiveAsFlow //
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -19,6 +21,11 @@ data class CollectionState(
     val userEmail: String = "Jukebox API"
 )
 
+// Definição de eventos de navegação para o ecrã
+sealed class CollectionNavEvent {
+    object NavigateBack : CollectionNavEvent()
+}
+
 @HiltViewModel
 class CollectionViewModel @Inject constructor(
     private val collectionRepository: ICollectionRepository
@@ -26,6 +33,10 @@ class CollectionViewModel @Inject constructor(
 
     var uiState by mutableStateOf(CollectionState())
         private set
+
+    // Canal para eventos de navegação (disparados uma única vez)
+    private val _navigationEvent = Channel<CollectionNavEvent>() //
+    val navigationEvent = _navigationEvent.receiveAsFlow() //
 
     fun fetchCollections() {
         viewModelScope.launch {
@@ -111,6 +122,8 @@ class CollectionViewModel @Inject constructor(
                             isLoading = false,
                             error = null
                         )
+                        // Dispara o evento de navegação apenas em caso de sucesso
+                        _navigationEvent.send(CollectionNavEvent.NavigateBack) //
                     }
 
                     is ResultWrapper.Error -> {
@@ -148,6 +161,8 @@ class CollectionViewModel @Inject constructor(
                             isLoading = false,
                             error = null
                         )
+                        // Dispara o evento de navegação apenas em caso de sucesso
+                        _navigationEvent.send(CollectionNavEvent.NavigateBack) //
                     }
 
                     is ResultWrapper.Error -> {

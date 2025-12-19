@@ -165,4 +165,29 @@ class MusicViewModel @Inject constructor(
             }
         }
     }
+
+    fun deleteMusic(musicId: String) {
+        viewModelScope.launch {
+            musicRepository.deleteMusic(musicId).collect { result ->
+                when (result) {
+                    is ResultWrapper.Loading -> {
+                        uiState = uiState.copy(isLoading = true, error = null)
+                    }
+                    is ResultWrapper.Success -> {
+                        uiState = uiState.copy(
+                            isLoading = false,
+                            musics = uiState.musics.filterNot { it.musId == musicId },
+                            error = null
+                        )
+                    }
+                    is ResultWrapper.Error -> {
+                        uiState = uiState.copy(
+                            isLoading = false,
+                            error = result.message ?: "Erro ao apagar música."
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
