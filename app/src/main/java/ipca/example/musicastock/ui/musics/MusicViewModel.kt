@@ -190,4 +190,7 @@ class MusicViewModel @Inject constructor(
             }
         }
     }
+    fun clearError() {
+        uiState = uiState.copy(error = null)
+    }
 }

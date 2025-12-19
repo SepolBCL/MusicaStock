@@ -175,4 +175,7 @@ class CollectionViewModel @Inject constructor(
             }
         }
     }
+    fun clearError() {
+        uiState = uiState.copy(error = null)
+    }
 }

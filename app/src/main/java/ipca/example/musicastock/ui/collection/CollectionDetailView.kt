@@ -77,6 +77,7 @@ fun CollectionDetailView(
     LaunchedEffect(collectionUi.error) {
         collectionUi.error?.let { errorMsg ->
             Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
+            collectionViewModel.clearError()
         }
     }
 
@@ -84,6 +85,7 @@ fun CollectionDetailView(
     LaunchedEffect(musicUi.error) {
         musicUi.error?.let { errorMsg ->
             Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
+            musicViewModel.clearError()
         }
     }
 
