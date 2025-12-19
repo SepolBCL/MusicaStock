@@ -101,7 +101,6 @@ class HomeViewModel @Inject constructor(
 
                 val selected = preselectId
                     ?: uiState.selectedEnvironmentId.takeIf { it.isNotBlank() }
-                    ?: opts.firstOrNull()?.environmentId
                     ?: ""
 
                 uiState = uiState.copy(

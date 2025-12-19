@@ -39,7 +39,7 @@ private val MenuBg = Color(0xFF1A1A1A)
 @Composable
 fun HomeView(
     navController: NavHostController,
-    environmentId: String,
+    environmentId: String? = null,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState = viewModel.uiState
@@ -53,10 +53,15 @@ fun HomeView(
     var newLinkedCollectionId by remember { mutableStateOf("") }
 
 
-    LaunchedEffect(Unit) { viewModel.loadEnvironments(preselectId = environmentId) }
+    LaunchedEffect(Unit) {
+        viewModel.loadEnvironments(preselectId = environmentId)
+    }
 
-    LaunchedEffect(uiState.isLoading, uiState.selectedMode) {
-        if (!uiState.isLoading && uiState.selectedMode == RecommendationMode.NONE) {
+    // Só ativa o modo de recomendações se houver um ambiente selecionado
+    LaunchedEffect(uiState.isLoading, uiState.selectedMode, uiState.selectedEnvironmentId) {
+        if (!uiState.isLoading &&
+            uiState.selectedEnvironmentId.isNotBlank() &&
+            uiState.selectedMode == RecommendationMode.NONE) {
             viewModel.selectWeatherMode()
         }
     }
@@ -332,6 +337,23 @@ fun HomeView(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                if (uiState.selectedEnvironmentId.isBlank()) {
+                    // MENSAGEM DE ESTADO VAZIO
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Por favor, selecione um ambiente no menu acima para visualizar as sugestões.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color.White.copy(alpha = 0.7f),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                } else {
+
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -441,6 +463,7 @@ fun HomeView(
                     ) {
                         Text("Todas as coletâneas")
                     }
+                }
                 }
             }
         }

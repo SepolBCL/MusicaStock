@@ -8,16 +8,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -38,9 +31,6 @@ import ipca.example.musicastock.ui.musics.MusicDetailView
 import ipca.example.musicastock.ui.theme.MusicastockTheme
 import javax.inject.Inject
 
-// Ambiente "Crossfit Box" (Porto)
-private const val DEFAULT_ENVIRONMENT_ID = "d32082ce-f5d5-4ec6-aa5a-5801e52e0204"
-
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
@@ -54,165 +44,143 @@ class MainActivity : ComponentActivity() {
         setContent {
             val navController = rememberNavController()
 
-            var startDestination by remember { mutableStateOf<String?>(null) }
-
-            LaunchedEffect(Unit) {
-                val token = tokenStore.getToken()
-                startDestination = if (token.isNullOrBlank()) "login" else "home"
-            }
+            // 1. Definimos o destino inicial fixo como "login"
+            // Removemos a verificação do tokenStore aqui para forçar a paragem no login
+            val startDestination = "login"
 
             MusicastockTheme {
-                if (startDestination == null) {
+                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Surface(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.padding(innerPadding),
                         color = MaterialTheme.colorScheme.background
                     ) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
+                        NavHost(
+                            navController = navController,
+                            startDestination = startDestination
                         ) {
-                            CircularProgressIndicator()
-                        }
-                    }
-                } else {
-                    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                        Surface(
-                            modifier = Modifier.padding(innerPadding),
-                            color = MaterialTheme.colorScheme.background
-                        ) {
-                            NavHost(
-                                navController = navController,
-                                startDestination = startDestination!!
-                            ) {
 
-                                // ------------- LOGIN -------------
-                                composable("login") {
-                                    LoginView(
-                                        onLoginSuccess = {
-                                            navController.navigate("home") {
-                                                popUpTo("login") { inclusive = true }
-                                            }
-                                        },
-                                        onForgotPasswordNavigate = {
-                                            // Vai para o ecrã onde o utilizador cola o token e define nova password
-                                            // (o token pode vir vazio, porque o user recebe no email)
-                                            navController.navigate("resetPassword")
+                            // ------------- LOGIN -------------
+                            composable("login") {
+                                LoginView(
+                                    onLoginSuccess = {
+                                        navController.navigate("home") {
+                                            popUpTo("login") { inclusive = true }
                                         }
-                                    )
-                                }
+                                    },
+                                    onForgotPasswordNavigate = {
+                                        navController.navigate("resetPassword")
+                                    }
+                                )
+                            }
 
-                                // ------------- HOME -------------
-                                composable("home") {
-                                    HomeView(
-                                        navController = navController,
-                                        environmentId = DEFAULT_ENVIRONMENT_ID
-                                    )
-                                }
+                            // ------------- HOME -------------
+                            composable("home") {
+                                HomeView(
+                                    navController = navController
+                                )
+                            }
 
-                                // ------------- COLEÇÕES -------------
-                                composable("collections") {
-                                    CollectionView(navController)
-                                }
+                            // ------------- COLEÇÕES -------------
+                            composable("collections") {
+                                CollectionView(navController)
+                            }
 
-                                composable(
-                                    route = "collectionDetail/{collectionId}",
-                                    arguments = listOf(
-                                        navArgument("collectionId") { type = NavType.StringType }
-                                    )
-                                ) { entry ->
-                                    val id = entry.arguments?.getString("collectionId")
-                                        ?: return@composable
+                            composable(
+                                route = "collectionDetail/{collectionId}",
+                                arguments = listOf(
+                                    navArgument("collectionId") { type = NavType.StringType }
+                                )
+                            ) { entry ->
+                                val id = entry.arguments?.getString("collectionId")
+                                    ?: return@composable
 
-                                    CollectionDetailView(
-                                        navController = navController,
-                                        collectionId = id
-                                    )
-                                }
+                                CollectionDetailView(
+                                    navController = navController,
+                                    collectionId = id
+                                )
+                            }
 
-                                composable("collectionCreate") {
-                                    CollectionCreateView(navController)
-                                }
+                            composable("collectionCreate") {
+                                CollectionCreateView(navController)
+                            }
 
-                                composable(
-                                    route = "collectionEdit/{collectionId}",
-                                    arguments = listOf(
-                                        navArgument("collectionId") { type = NavType.StringType }
-                                    )
-                                ) { entry ->
-                                    val id = entry.arguments?.getString("collectionId")
-                                        ?: return@composable
+                            composable(
+                                route = "collectionEdit/{collectionId}",
+                                arguments = listOf(
+                                    navArgument("collectionId") { type = NavType.StringType }
+                                )
+                            ) { entry ->
+                                val id = entry.arguments?.getString("collectionId")
+                                    ?: return@composable
 
-                                    CollectionEditView(
-                                        navController = navController,
-                                        collectionId = id
-                                    )
-                                }
+                                CollectionEditView(
+                                    navController = navController,
+                                    collectionId = id
+                                )
+                            }
 
-                                // ------------- MÚSICAS -------------
-                                composable("allMusics") {
-                                    AllMusicsView(navController = navController)
-                                }
+                            // ------------- MÚSICAS -------------
+                            composable("allMusics") {
+                                AllMusicsView(navController = navController)
+                            }
 
-                                composable(
-                                    route = "musicDetail/{collectionId}",
-                                    arguments = listOf(
-                                        navArgument("collectionId") { type = NavType.StringType }
-                                    )
-                                ) { entry ->
-                                    val colId = entry.arguments?.getString("collectionId")
-                                        ?: return@composable
+                            composable(
+                                route = "musicDetail/{collectionId}",
+                                arguments = listOf(
+                                    navArgument("collectionId") { type = NavType.StringType }
+                                )
+                            ) { entry ->
+                                val colId = entry.arguments?.getString("collectionId")
+                                    ?: return@composable
 
-                                    MusicDetailView(
-                                        navController = navController,
-                                        collectionId = colId,
-                                        musicId = null
-                                    )
-                                }
+                                MusicDetailView(
+                                    navController = navController,
+                                    collectionId = colId,
+                                    musicId = null
+                                )
+                            }
 
-                                composable(
-                                    route = "musicDetail/{collectionId}/{musicId}",
-                                    arguments = listOf(
-                                        navArgument("collectionId") { type = NavType.StringType },
-                                        navArgument("musicId") { type = NavType.StringType }
-                                    )
-                                ) { entry ->
-                                    val colId = entry.arguments?.getString("collectionId")
-                                        ?: return@composable
+                            composable(
+                                route = "musicDetail/{collectionId}/{musicId}",
+                                arguments = listOf(
+                                    navArgument("collectionId") { type = NavType.StringType },
+                                    navArgument("musicId") { type = NavType.StringType }
+                                )
+                            ) { entry ->
+                                val colId = entry.arguments?.getString("collectionId")
+                                    ?: return@composable
 
-                                    val musId = entry.arguments?.getString("musicId")
-                                        ?: return@composable
+                                val musId = entry.arguments?.getString("musicId")
+                                    ?: return@composable
 
-                                    MusicDetailView(
-                                        navController = navController,
-                                        collectionId = colId,
-                                        musicId = musId
-                                    )
-                                }
+                                MusicDetailView(
+                                    navController = navController,
+                                    collectionId = colId,
+                                    musicId = musId
+                                )
+                            }
 
-                                // ------------- RESET PASSWORD -------------
-                                // Token como query param, porque pode ter '/' '+' '='
-                                // Para navegar com token: navController.navigate("resetPassword?token=${Uri.encode(token)}")
-                                composable(
-                                    route = "resetPassword?token={token}",
-                                    arguments = listOf(
-                                        navArgument("token") {
-                                            type = NavType.StringType
-                                            defaultValue = ""
+                            // ------------- RESET PASSWORD -------------
+                            composable(
+                                route = "resetPassword?token={token}",
+                                arguments = listOf(
+                                    navArgument("token") {
+                                        type = NavType.StringType
+                                        defaultValue = ""
+                                    }
+                                )
+                            ) { entry ->
+                                val encodedToken = entry.arguments?.getString("token") ?: ""
+                                val token = if (encodedToken.isBlank()) "" else Uri.decode(encodedToken)
+
+                                ResetPasswordView(
+                                    token = token,
+                                    onPasswordResetSuccess = {
+                                        navController.navigate("login") {
+                                            popUpTo("login") { inclusive = true }
                                         }
-                                    )
-                                ) { entry ->
-                                    val encodedToken = entry.arguments?.getString("token") ?: ""
-                                    val token = if (encodedToken.isBlank()) "" else Uri.decode(encodedToken)
-
-                                    ResetPasswordView(
-                                        token = token,
-                                        onPasswordResetSuccess = {
-                                            navController.navigate("login") {
-                                                popUpTo("login") { inclusive = true }
-                                            }
-                                        }
-                                    )
-                                }
+                                    }
+                                )
                             }
                         }
                     }
